@@ -20,19 +20,19 @@ const FAQ = [1, 2, 3, 4, 5, 6] as const;
 export default async function ContactPage() {
   const { t } = await getT();
   return (
-    <div className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
-      <header className="max-w-2xl">
-        <h1 className="text-4xl font-semibold tracking-tight text-fg">{t("contact.title")}</h1>
+    <div className="mx-auto max-w-6xl px-4 py-20 sm:py-24">
+      <header className="max-w-2xl"><p className="public-eyebrow mb-4">Rabies Track Nepal</p>
+        <h1 className="text-4xl font-semibold tracking-tight text-fg sm:text-6xl">{t("contact.title")}</h1>
         <p className="mt-3 text-lg text-muted">{t("contact.lead")}</p>
       </header>
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <section className="rounded-2xl border border-border bg-surface p-6 shadow-card" aria-labelledby="form-title">
+      <div className="mt-10 grid gap-6 lg:grid-cols-[1.25fr_.75fr]">
+        <section className="rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-9" aria-labelledby="form-title">
           <h2 id="form-title" className="mb-5 text-lg font-semibold text-fg">{t("contact.form.title")}</h2>
           <ContactForm />
         </section>
 
-        <aside className="rounded-2xl border border-border bg-surface p-6 shadow-card" aria-labelledby="helplines">
+        <aside className="rounded-2xl border border-border bg-surface p-6 shadow-card sm:p-9" aria-labelledby="helplines">
           <h2 id="helplines" className="flex items-center gap-2 text-lg font-semibold text-fg">
             <Phone className="size-5 text-danger" /> {t("contact.helplines")}
           </h2>
@@ -55,7 +55,7 @@ export default async function ContactPage() {
         </aside>
       </div>
 
-      <section className="mt-16" aria-labelledby="faq">
+      <section className="mt-16 max-w-4xl" aria-labelledby="faq">
         <h2 id="faq" className="text-2xl font-semibold tracking-tight text-fg">{t("contact.faq")}</h2>
         <div className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
           {FAQ.map((n) => (

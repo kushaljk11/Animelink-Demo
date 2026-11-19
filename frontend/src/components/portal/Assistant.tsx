@@ -24,7 +24,7 @@ export function Assistant({ compact }: { compact?: boolean }) {
 
   // Block body: newer browsers return a Promise from scrollIntoView, which React rejects as an effect cleanup.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (messages.length) endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages]);
 
   const send = async (text: string) => {
@@ -57,16 +57,16 @@ export function Assistant({ compact }: { compact?: boolean }) {
   };
 
   return (
-    <div className={cn("flex flex-col overflow-hidden rounded-xl border border-border bg-surface", compact ? "h-[520px]" : "h-[calc(100dvh-12rem)] min-h-[480px]")}>
-      <div className="scroll-thin flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+    <div className={cn("flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card", compact ? "h-[440px] max-h-[75dvh]" : "h-[calc(100dvh-12rem)] min-h-[480px]")}>
+      <div aria-live="polite" className="scroll-thin flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
         {messages.length === 0 && (
-          <div className="mx-auto max-w-lg py-8 text-center">
+          <div className="mx-auto max-w-lg py-2 text-center">
             <span className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-border bg-surface-2"><Bot className="size-6 text-fg-soft" /></span>
             <p className="mt-4 text-base font-semibold text-fg">Rabies Track assistant</p>
             <p className="mt-1 text-sm text-muted">Ask in English or नेपाली. I can explain features and give general guidance — I can&apos;t diagnose rabies or replace a doctor or vet.</p>
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {STARTERS.map((s) => (
-                <button key={s} onClick={() => void send(s)} className="rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs text-fg-soft transition hover:border-border-strong hover:text-fg">{s}</button>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {(compact ? STARTERS.slice(0, 3) : STARTERS).map((s) => (
+                <button key={s} onClick={() => void send(s)} className="rounded-full border border-border bg-surface-2 px-3 py-2 text-sm text-fg-soft transition hover:border-success hover:text-fg">{s}</button>
               ))}
             </div>
           </div>
@@ -126,6 +126,7 @@ export function Assistant({ compact }: { compact?: boolean }) {
         className="flex items-end gap-2 border-t border-border p-3"
       >
         <Textarea
+          aria-label="Message the assistant"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -141,7 +142,7 @@ export function Assistant({ compact }: { compact?: boolean }) {
         />
         <Button type="submit" variant="primary" size="icon" disabled={!input.trim() || busy} aria-label="Send"><ArrowUp /></Button>
       </form>
-      <p className="border-t border-border bg-surface-2 px-4 py-2 text-[11px] text-muted">General guidance only. For a bite or scratch, wash the wound for 15 minutes and visit a hospital today. Emergency: 102.</p>
+      <p className="border-t border-border bg-surface-2 px-4 py-2 text-xs leading-relaxed text-fg-soft">General guidance only, not a diagnosis. For a bite or scratch, wash the wound for 15 minutes and visit a hospital today. Emergency: 102.</p>
     </div>
   );
 }

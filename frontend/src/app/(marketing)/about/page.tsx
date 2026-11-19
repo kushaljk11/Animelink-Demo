@@ -20,15 +20,15 @@ export default async function AboutPage() {
   return (
     <div>
       <section className="relative overflow-hidden border-b border-border">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_70%_at_50%_0%,color-mix(in_oklab,var(--accent)_12%,transparent),transparent)]" />
-        <div className="relative mx-auto max-w-4xl px-4 py-16 text-center sm:py-20">
-          <h1 className="text-balance text-4xl font-semibold tracking-tight text-fg sm:text-5xl">{t("about.title")}</h1>
-          <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg text-muted">{t("about.lead")}</p>
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[color-mix(in_oklab,var(--success)_6%,var(--bg))]" />
+        <div className="relative mx-auto max-w-6xl px-4 py-20 sm:py-24"><p className="public-eyebrow">Rabies Track Nepal · One Health</p>
+          <h1 className="mt-4 max-w-4xl text-balance text-4xl font-semibold tracking-tight text-fg sm:text-6xl">{t("about.title")}</h1>
+          <p className="mt-5 max-w-2xl text-pretty text-lg text-muted">{t("about.lead")}</p>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-6 px-4 py-16 lg:grid-cols-2">
-        <article className="rounded-2xl border border-border bg-surface p-7 shadow-card">
+        <article className="rounded-2xl border border-border bg-surface p-8 shadow-card">
           <Target className="size-6 text-danger" />
           <h2 className="mt-4 text-xl font-semibold text-fg">{t("about.mission.title")}</h2>
           <p className="mt-2 leading-relaxed text-muted">{t("about.mission.body")}</p>
@@ -46,7 +46,7 @@ export default async function AboutPage() {
         </article>
       </section>
 
-      <section className="border-y border-border bg-surface/40">
+      <section className="border-y border-border bg-[color-mix(in_oklab,var(--success)_5%,var(--bg))]">
         <div className="mx-auto max-w-6xl px-4 py-16">
           <h2 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-fg">
             <Building2 className="size-6 text-success" /> {t("about.how.title")}
@@ -67,7 +67,7 @@ export default async function AboutPage() {
         <div className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
           {PRINCIPLES.map((p) => (
             <div key={p.title} className="bg-surface p-6">
-              <p.icon className="size-5 text-accent" />
+              <p.icon className="size-5 text-success" />
               <h3 className="mt-4 font-semibold text-fg">{t(p.title)}</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-muted">{t(p.body)}</p>
             </div>

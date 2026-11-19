@@ -48,10 +48,17 @@ export default async function setup(project: TestProject) {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set (run `npm run setup` at the repo root first)");
   const dbUrl = testDatabaseUrl(process.env.DATABASE_URL);
   if (!new URL(dbUrl).pathname.endsWith("_test")) throw new Error("Refusing to touch a non-_test database");
+  const direct = process.env.DATABASE_URL_UNPOOLED;
+  const pooledBase = new URL(process.env.DATABASE_URL);
+  const directBase = direct ? new URL(direct) : pooledBase;
+  const sameDatabase = directBase.pathname === pooledBase.pathname &&
+    directBase.hostname.replace("-pooler.", ".") === pooledBase.hostname.replace("-pooler.", ".");
+  const directTestUrl = sameDatabase ? testDatabaseUrl(directBase.toString()) : dbUrl;
 
   // Everything below (Prisma CLI + the in-process app) uses the test database and a throwaway upload dir.
   Object.assign(process.env, {
     DATABASE_URL: dbUrl,
+    DATABASE_URL_UNPOOLED: directTestUrl,
     UPLOAD_DIR: path.join(root, ".test-uploads"),
     RATE_LIMIT_MULTIPLIER: "50",
     DISABLE_REMINDER_SCHEDULER: "true",

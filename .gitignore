@@ -2,6 +2,7 @@
 node_modules/
 .next/
 .next-test/
+.next-neon-build/
 dist/
 build/
 out/
@@ -34,3 +35,4 @@ uploads/*
 !uploads/.gitkeep
 backend/uploads/*
 !backend/uploads/.gitkeep
+.neon

@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
-// One client per process. In dev, Next.js hot-reload re-evaluates modules, so the
-// client is parked on globalThis to avoid exhausting SQLite file handles.
+// Reuse one client per process to avoid exhausting database connections during development reloads.
 const globalForPrisma = globalThis as unknown as { __prisma?: PrismaClient };
 
 export const prisma =

@@ -170,6 +170,8 @@ frontend/
 
 ## 4. Quick start
 
+For Neon, `neon deploy` pulls `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct) into the root `.env`. Copy both values into `backend/.env`, which the Express server and Prisma CLI load. Repeat this after refreshing Neon credentials. Prisma uses the direct URL for migrations; for local PostgreSQL both variables can use the same URL. Apply the existing schema with `npm run db:deploy --prefix backend`. This does not seed demo accounts; `npm run db:seed` is a separate, optional operation.
+
 ### Prerequisites
 
 - **Node.js 20.12+** (22 LTS recommended)

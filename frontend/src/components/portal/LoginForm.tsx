@@ -39,8 +39,8 @@ export function LoginForm({ next, showDemo }: { next: string; showDemo: boolean 
   };
 
   return (
-    <Card className="p-6 sm:p-8">
-      <h1 className="text-xl font-semibold tracking-tight text-fg">Sign in</h1>
+    <Card className="rounded-2xl p-6 shadow-pop sm:p-10">
+      <h1 className="text-3xl font-semibold tracking-tight text-fg">Sign in</h1>
       <p className="mt-1 text-sm text-muted">
         New here?{" "}
         <a href="/register" className="font-medium text-accent hover:underline">
@@ -55,7 +55,7 @@ export function LoginForm({ next, showDemo }: { next: string; showDemo: boolean 
         <Field label="Password" error={formState.errors.password?.message} htmlFor="password">
           <Input id="password" type="password" autoComplete="current-password" {...register("password")} aria-invalid={!!formState.errors.password} />
         </Field>
-        <Button type="submit" variant="primary" className="w-full" loading={busy !== null && !DEMO.some((d) => d.email === busy)}>
+        <Button type="submit" variant="success" className="h-12 w-full" loading={busy !== null && !DEMO.some((d) => d.email === busy)}>
           <LogIn /> Sign in
         </Button>
       </form>
