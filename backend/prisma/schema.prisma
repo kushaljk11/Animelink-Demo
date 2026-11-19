@@ -1,0 +1,569 @@
+// =============================================================================
+// Rabies Track Nepal — Prisma schema (local-first, PostgreSQL)
+// Source of truth: specs/FinalYearProject/R – Database Design - ER Diagram.md
+//
+// Spec → local substitutions:
+//   * PostGIS GEOMETRY(Point,4326)  →  latitude/longitude Float pairs (WGS84).
+//     Spatial queries (ST_DWithin, clustering) run in src/lib/geo via a
+//     bounding-box pre-filter in SQL + haversine refinement in TypeScript
+//     (works without the PostGIS extension; indexes on lat/lng keep it fast).
+//   * Text search uses Postgres ILIKE (Prisma mode: "insensitive").
+//
+// Tables 1–12 map 1:1 to Section R. Tables 13–18 are additions the spec asks
+// for elsewhere (U: audit logging, H17: owner↔vet chat, T5: chatbot
+// evaluation, U: sessions/expiry + Account for credential/provider linkage).
+//
+// Roles: the four Section R roles + ADMIN (platform administrator who
+// verifies clinics / rescue organisations — a duty the spec leaves unassigned).
+// Public / guest users (Section K.5) have no account and no row here.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- enums ----
+
+enum Role {
+  ADMIN
+  PET_OWNER
+  VET_CLINIC
+  RESCUE_ORG
+  WARD_OFFICER
+}
+
+enum Locale {
+  EN
+  NE
+}
+
+enum Species {
+  DOG
+  CAT
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+/// Lifecycle of the record itself. Booster status (UP_TO_DATE / DUE_SOON /
+/// OVERDUE) is derived from boosterDueDate at read time — see src/lib/vaccination.
+enum VaccinationRecordStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  REVOKED
+}
+
+enum AnimalType {
+  DOG
+  CAT
+  MONKEY
+  JACKAL
+  MONGOOSE
+  LIVESTOCK
+  OTHER
+}
+
+enum Severity {
+  LOW // lick on broken skin / minor scratch (WHO Cat II-ish)
+  MODERATE
+  HIGH // transdermal bite, head/neck, multiple wounds (WHO Cat III-ish)
+}
+
+enum IncidentStatus {
+  REPORTED
+  UNDER_REVIEW
+  VERIFIED
+  RESOLVED
+  DISMISSED
+}
+
+enum LostReportStatus {
+  ACTIVE
+  FOUND
+  CANCELLED
+}
+
+enum NotificationType {
+  VACCINATION_REMINDER
+  BOOSTER_OVERDUE
+  LOST_PET_SCAN
+  INCIDENT_UPDATE
+  CLUSTER_ALERT
+  ACCOUNT
+  CHAT_MESSAGE
+}
+
+enum NotificationStatus {
+  SCHEDULED
+  SENT
+  READ
+  FAILED
+  CANCELLED
+}
+
+// ------------------------------------------------------- 1. users ----------
+
+model User {
+  id           String   @id @default(cuid()) @map("user_id")
+  fullName     String   @map("full_name")
+  email        String   @unique
+  phone        String?
+  passwordHash String   @map("password_hash")
+  role         Role
+  wardNumber   Int?     @map("ward_number")
+  municipality String?
+  locale       Locale   @default(EN)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  pets                 Pet[]
+  veterinaryClinic     VeterinaryClinic?
+  rescueOrganization   RescueOrganization?
+  registeredStrays     CommunityStray[]    @relation("StrayRegisteredBy")
+  incidentsReported    BiteIncident[]      @relation("IncidentReporter")
+  incidentsHandled     BiteIncident[]      @relation("IncidentHandler")
+  notifications        Notification[]
+  vaccinationsRecorded VaccinationRecord[] @relation("VaccinationRecordedBy")
+  auditLogs            AuditLog[]
+  sessions             Session[]
+  accounts             Account[]
+  ownerConversations   Conversation[]      @relation("ConversationOwner")
+  messagesSent         ChatMessage[]
+  chatbotLogs          ChatbotLog[]
+
+  @@index([role])
+  @@index([municipality, wardNumber])
+  @@map("users")
+}
+
+// -------------------------------------------------------- 2. pets ----------
+
+model Pet {
+  id           String    @id @default(cuid()) @map("pet_id")
+  ownerId      String    @map("owner_id")
+  name         String
+  species      Species
+  breed        String?
+  gender       Gender    @default(UNKNOWN)
+  dateOfBirth  DateTime? @map("date_of_birth")
+  color        String?
+  photoUrl     String?   @map("photo_url")
+  medicalNotes String?   @map("medical_notes")
+  qrToken      String    @unique @map("qr_token")
+  lostStatus   Boolean   @default(false) @map("lost_status")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  owner              User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  vaccinationRecords VaccinationRecord[]
+  lostPetReports     LostPetReport[]
+  qrScanEvents       QrScanEvent[]
+  breedPredictions   AiBreedPrediction[]
+  conversations      Conversation[]
+
+  @@index([ownerId])
+  @@index([lostStatus])
+  @@map("pets")
+}
+
+// ------------------------------------------ 3. vaccination_records ---------
+
+model VaccinationRecord {
+  id               String                  @id @default(cuid()) @map("vaccination_id")
+  petId            String                  @map("pet_id")
+  vetId            String                  @map("vet_id") // → veterinary_clinics
+  recordedById     String?                 @map("recorded_by") // individual vet user
+  vaccineName      String                  @map("vaccine_name")
+  batchNumber      String                  @map("batch_number")
+  administeredDate DateTime                @map("administered_date")
+  boosterDueDate   DateTime?               @map("booster_due_date")
+  status           VaccinationRecordStatus @default(PENDING_VERIFICATION)
+  notes            String?
+  verifiedAt       DateTime?               @map("verified_at")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+
+  pet        Pet              @relation(fields: [petId], references: [id], onDelete: Cascade)
+  clinic     VeterinaryClinic @relation(fields: [vetId], references: [id], onDelete: Restrict)
+  recordedBy User?            @relation("VaccinationRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([petId])
+  @@index([vetId])
+  @@index([boosterDueDate])
+  @@map("vaccination_records")
+}
+
+// ------------------------------------------ 4. veterinary_clinics ----------
+
+model VeterinaryClinic {
+  id                 String             @id @default(cuid()) @map("clinic_id")
+  userId             String             @unique @map("user_id")
+  clinicName         String             @map("clinic_name")
+  registrationNumber String             @unique @map("registration_number")
+  phone              String
+  address            String
+  wardNumber         Int?               @map("ward_number")
+  municipality       String?
+  latitude           Float
+  longitude          Float
+  openingHours       String?            @map("opening_hours")
+  serviceRadiusKm    Float              @default(5) @map("service_radius_km")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vaccinationRecords VaccinationRecord[]
+  conversations      Conversation[]
+
+  @@index([latitude, longitude])
+  @@index([verificationStatus])
+  @@map("veterinary_clinics")
+}
+
+// ---------------------------------------- 5. rescue_organizations ----------
+
+model RescueOrganization {
+  id                 String             @id @default(cuid()) @map("organization_id")
+  userId             String             @unique @map("user_id")
+  organizationName   String             @map("organization_name")
+  phone              String
+  address            String
+  wardNumber         Int?               @map("ward_number")
+  municipality       String?
+  latitude           Float
+  longitude          Float
+  hasShelter         Boolean            @default(true) @map("has_shelter")
+  serviceRadiusKm    Float              @default(10) @map("service_radius_km")
+  verificationStatus VerificationStatus @default(PENDING) @map("verification_status")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cnvrRecords CnvrRecord[]
+
+  @@index([latitude, longitude])
+  @@index([verificationStatus])
+  @@map("rescue_organizations")
+}
+
+// -------------------------------------------- 6. community_strays ----------
+
+model CommunityStray {
+  id                  String   @id @default(cuid()) @map("stray_id")
+  registeredById      String   @map("registered_by")
+  tagOrEarMark        String?  @map("tag_or_ear_mark")
+  species             Species  @default(DOG)
+  gender              Gender   @default(UNKNOWN)
+  estimatedAge        String?  @map("estimated_age") // "~2 years", "puppy"
+  color               String?
+  breed               String?
+  physicalDescription String?  @map("physical_description")
+  address             String? // nearest landmark / tole
+  photoUrl            String?  @map("photo_url")
+  latitude            Float // spec: location
+  longitude           Float
+  wardNumber          Int?     @map("ward_number")
+  municipality        String?
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  registeredBy User         @relation("StrayRegisteredBy", fields: [registeredById], references: [id], onDelete: Restrict)
+  cnvrRecords  CnvrRecord[]
+
+  @@index([latitude, longitude])
+  @@index([tagOrEarMark])
+  @@index([municipality, wardNumber])
+  @@map("community_strays")
+}
+
+// ------------------------------------------------- 7. cnvr_records ---------
+
+model CnvrRecord {
+  id                String    @id @default(cuid()) @map("cnvr_id")
+  strayId           String    @map("stray_id")
+  organizationId    String    @map("organization_id")
+  vaccineName       String?   @map("vaccine_name")
+  vaccinationDate   DateTime? @map("vaccination_date")
+  sterilizationDate DateTime? @map("sterilization_date")
+  releaseLatitude   Float?    @map("release_latitude") // spec: release_location
+  releaseLongitude  Float?    @map("release_longitude")
+  releaseDate       DateTime? @map("release_date")
+  notes             String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  stray        CommunityStray     @relation(fields: [strayId], references: [id], onDelete: Cascade)
+  organization RescueOrganization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([strayId])
+  @@index([organizationId])
+  @@index([releaseLatitude, releaseLongitude])
+  @@map("cnvr_records")
+}
+
+// ------------------------------------------------ 8. bite_incidents --------
+
+model BiteIncident {
+  id                String         @id @default(cuid()) @map("incident_id")
+  /// Public tracking code NP-XXXX-XXXX (app generates; DB default backfills seeds/legacy rows).
+  trackingCode      String         @unique @default(dbgenerated("('NP-'::text || upper(substr(md5((random())::text), 1, 4)) || '-'::text || upper(substr(md5((random())::text), 1, 4)))")) @map("tracking_code")
+  reportedById      String?        @map("reported_by") // null = guest report (K.5)
+  reporterName      String?        @map("reporter_name") // guest contact only
+  reporterPhone     String?        @map("reporter_phone")
+  animalType        AnimalType     @map("animal_type")
+  severity          Severity
+  description       String
+  incidentDate      DateTime       @map("incident_date")
+  suspectedRabies   Boolean        @default(false) @map("suspected_rabies")
+  photoUrl          String?        @map("photo_url")
+  latitude          Float // spec: location
+  longitude         Float
+  locationAccuracyM Float?         @map("location_accuracy_m") // M: flag approximate GPS
+  address           String? // nearest landmark / tole
+  wardNumber        Int?           @map("ward_number")
+  municipality      String?
+  status            IncidentStatus @default(REPORTED)
+  handledById       String?        @map("handled_by")
+  statusNote        String?        @map("status_note")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  reportedBy User? @relation("IncidentReporter", fields: [reportedById], references: [id], onDelete: SetNull)
+  handledBy  User? @relation("IncidentHandler", fields: [handledById], references: [id], onDelete: SetNull)
+
+  @@index([latitude, longitude])
+  @@index([municipality, wardNumber])
+  @@index([status])
+  @@index([incidentDate])
+  @@index([reporterPhone])
+  @@map("bite_incidents")
+}
+
+// ---------------------------------------------- 9. lost_pet_reports --------
+
+model LostPetReport {
+  id                String           @id @default(cuid()) @map("lost_report_id")
+  petId             String           @map("pet_id")
+  lastSeenLatitude  Float?           @map("last_seen_latitude") // spec: last_seen_location
+  lastSeenLongitude Float?           @map("last_seen_longitude")
+  lastSeenDate      DateTime         @map("last_seen_date")
+  description       String?
+  status            LostReportStatus @default(ACTIVE)
+  createdAt         DateTime         @default(now()) @map("created_at")
+  resolvedAt        DateTime?        @map("resolved_at")
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, status])
+  @@map("lost_pet_reports")
+}
+
+// ------------------------------------------------- 10. qr_scan_events ------
+
+model QrScanEvent {
+  id                  String   @id @default(cuid()) @map("scan_id")
+  petId               String   @map("pet_id")
+  scannedAt           DateTime @default(now()) @map("scanned_at")
+  sharedLatitude      Float?   @map("shared_latitude") // spec: shared_location
+  sharedLongitude     Float?   @map("shared_longitude")
+  locationPermission  Boolean  @default(false) @map("location_permission")
+  finderMessage       String?  @map("finder_message")
+  finderContact       String?  @map("finder_contact") // only if finder volunteers it
+  deviceOrSessionInfo String?  @map("device_or_session_info") // coarse UA family only
+
+  pet Pet @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@index([petId, scannedAt])
+  @@map("qr_scan_events")
+}
+
+// -------------------------------------------------- 11. notifications -----
+
+model Notification {
+  id          String             @id @default(cuid()) @map("notification_id")
+  userId      String             @map("user_id")
+  type        NotificationType
+  title       String
+  message     String
+  link        String? // in-app deep link, e.g. /app/pets/{id}
+  scheduledAt DateTime           @default(now()) @map("scheduled_at")
+  sentAt      DateTime?          @map("sent_at")
+  readAt      DateTime?          @map("read_at")
+  status      NotificationStatus @default(SCHEDULED)
+  dedupeKey   String?            @unique @map("dedupe_key") // stops duplicate reminders
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([scheduledAt, status])
+  @@map("notifications")
+}
+
+// ------------------------------------------- 12. ai_breed_predictions ------
+
+model AiBreedPrediction {
+  id              String   @id @default(cuid()) @map("prediction_id")
+  petId           String?  @map("pet_id") // null when run before pet is saved
+  imageUrl        String   @map("image_url")
+  predictedBreed  String   @map("predicted_breed")
+  confidenceScore Float    @map("confidence_score") // 0..1
+  alternatives    String? // JSON: [{breed, score}]
+  modelVersion    String   @map("model_version")
+  ownerConfirmed  Boolean? @map("owner_confirmed") // null = not yet answered
+  finalBreed      String?  @map("final_breed") // what owner actually saved
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  pet Pet? @relation(fields: [petId], references: [id], onDelete: SetNull)
+
+  @@index([petId])
+  @@map("ai_breed_predictions")
+}
+
+// =============================================================================
+// Additions required by other spec sections
+// =============================================================================
+
+// U – Audit Logging: vaccination create/verify, incident status, CNVR, admin.
+model AuditLog {
+  id         String   @id @default(cuid()) @map("audit_id")
+  actorId    String?  @map("actor_id")
+  action     String // e.g. VACCINATION_VERIFIED, INCIDENT_STATUS_CHANGED
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  before     String? // JSON snapshot
+  after      String? // JSON snapshot
+  ipHash     String?  @map("ip_hash")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// U – Session expiry / logout: server-side revocable sessions behind the JWT cookie.
+model Session {
+  id        String    @id @default(cuid()) @map("session_id")
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?   @map("user_agent")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// H17 – Chat between pet owner and vet clinic (optionally about one pet).
+model Conversation {
+  id        String   @id @default(cuid()) @map("conversation_id")
+  ownerId   String   @map("owner_id")
+  clinicId  String   @map("clinic_id")
+  petId     String?  @map("pet_id")
+  subject   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner    User             @relation("ConversationOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  clinic   VeterinaryClinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  pet      Pet?             @relation(fields: [petId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+
+  @@unique([ownerId, clinicId, petId])
+  @@map("conversations")
+}
+
+model ChatMessage {
+  id             String    @id @default(cuid()) @map("message_id")
+  conversationId String    @map("conversation_id")
+  senderId       String    @map("sender_id")
+  body           String
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("chat_messages")
+}
+
+// T5 – Chatbot evaluation: relevance, response time, safe escalation.
+model ChatbotLog {
+  id              String   @id @default(cuid()) @map("chatbot_log_id")
+  userId          String?  @map("user_id")
+  sessionKey      String   @map("session_key")
+  locale          Locale   @default(EN)
+  question        String // stored after PII scrubbing
+  intent          String // matched rule/intent id
+  answer          String
+  safetyEscalated Boolean  @default(false) @map("safety_escalated") // bite/medical → professional help
+  responseMs      Int      @map("response_ms")
+  helpful         Boolean? // thumbs up/down
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([intent])
+  @@index([createdAt])
+  @@map("chatbot_logs")
+}
+
+// U – Authentication: credential/provider linkage. Local-first: every user has
+// one "credentials" account; the table keeps the door open for OAuth later
+// without touching users. Also carries brute-force lockout state.
+model Account {
+  id                String    @id @default(cuid()) @map("account_id")
+  userId            String    @map("user_id")
+  provider          String // "credentials"
+  providerAccountId String    @map("provider_account_id") // email for credentials
+  lastLoginAt       DateTime? @map("last_login_at")
+  failedAttempts    Int       @default(0) @map("failed_attempts")
+  lockedUntil       DateTime? @map("locked_until")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// ---------------------------------------------- inquiries (public contact form)
+
+model Inquiry {
+  id            String   @id @default(cuid()) @map("inquiry_id")
+  name          String
+  phone         String
+  email         String?
+  topic         String
+  message       String
+  phoneVerified Boolean  @default(false) @map("phone_verified")
+  status        String   @default("NEW") // NEW | RESOLVED
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@map("inquiries")
+}

@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+/* Class-based dark mode driven by next-themes (<html class="dark">). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ tokens
+   Zenith / Apex-style achromatic system: #090D16 canvas, #111827 surfaces, crisp #1F2937
+   borders, near-white primary. Colour is reserved for data and status. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f4f8;
+  --surface-3: #e8edf3;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --fg: #0f172a;
+  --fg-soft: #334155;
+  --muted: #64748b;
+  --primary: #0f172a;
+  --primary-fg: #f8fafc;
+  --ring: #94a3b8;
+  --accent: #6366f1;
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #2563eb;
+  --violet: #7c3aed;
+  --chart-1: #6366f1;
+  --chart-2: #0ea5e9;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+  --shadow-pop: 0 10px 30px -10px rgb(15 23 42 / 0.25);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #090d16;
+  --surface: #111827;
+  --surface-2: #161e2c;
+  --surface-3: #1c2533;
+  --border: #1f2937;
+  --border-strong: #374151;
+  --fg: #f3f4f6;
+  --fg-soft: #d1d5db;
+  --muted: #9ca3af;
+  --primary: #f8fafc;
+  --primary-fg: #0f172a;
+  --ring: #4b5563;
+  --accent: #818cf8;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --info: #60a5fa;
+  --violet: #a78bfa;
+  --chart-1: #818cf8;
+  --chart-2: #38bdf8;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.02) inset, 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-soft: var(--fg-soft);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-violet: var(--violet);
+  /* Geist has no Devanagari glyphs, so Nepali text falls through to Noto Sans Devanagari (self-hosted, works offline). */
+  --font-sans: var(--font-geist-sans), "Noto Sans Devanagari", ui-sans-serif, system-ui, sans-serif;
+  --font-deva: "Noto Sans Devanagari", var(--font-geist-sans), sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --animate-pulse-dot: pulse-dot 1.8s ease-out infinite;
+  --animate-slide-in-right: slide-in-right 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-zoom-in: zoom-in 160ms ease-out;
+
+  @keyframes pulse-dot {
+    0% { box-shadow: 0 0 0 0 color-mix(in oklab, currentColor 55%, transparent); }
+    70% { box-shadow: 0 0 0 6px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes zoom-in {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html,
+  body {
+    background: var(--bg);
+    color: var(--fg);
+  }
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Thin scrollbars inside panels */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* ------------------------------------------------------------------ leaflet
+   OSM raster tiles are light; in dark mode they are inverted and re-hued so
+   the map sits inside the achromatic canvas instead of glaring. */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--surface-2);
+}
+.dark .rtn-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.6);
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-pop);
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+}
+.leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--muted);
+}
+.leaflet-bar a,
+.leaflet-control-attribution {
+  background: var(--surface) !important;
+  color: var(--muted) !important;
+  border-color: var(--border) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--fg-soft) !important;
+}
+.rtn-marker {
+  background: transparent;
+  border: 0;
+}
+
+/* Nepali UI: Devanagari needs a little more line height to keep matras from clipping. */
+html[lang="ne"] body {
+  line-height: 1.6;
+}
+html[lang="ne"] :where(h1, h2, h3) {
+  line-height: 1.35;
+}

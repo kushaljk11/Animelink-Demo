@@ -1,0 +1,4 @@
+
+**Rabies Track Nepal is needed because animal-health information in Nepal is often fragmented across pet owners, veterinary clinics, rescue organizations, and local authorities.** Vaccination records can be lost, booster dates can be missed, stray vaccination/sterilization activities may not be centrally tracked, and animal-bite incidents are usually recorded without connected location-based analysis.
+
+The project brings these areas together through **digital pet health records, QR identification, vaccination reminders, CNVR tracking, bite/suspected-rabies reporting, and geospatial mapping**. Its goal is not to replace government systems, but to demonstrate how a centralized digital platform could improve coordination, monitoring, and decision-making around pet health and rabies-related risks in Nepal.

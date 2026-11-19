@@ -1,0 +1,1 @@
+A centralized digital platform that connects pet health records, vaccination tracking, stray management, and geospatial rabies surveillance for Nepal.

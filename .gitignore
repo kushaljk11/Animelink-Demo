@@ -1,0 +1,36 @@
+# Dependencies and generated output
+node_modules/
+.next/
+.next-test/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+!**/.env.example
+*credentials*.json
+*service-account*.json
+*.pem
+*.p12
+*.pfx
+
+# Local databases, logs, and temporary files
+prisma/*.db
+prisma/*.db-journal
+*.sqlite
+*.sqlite3
+*.log
+.test-uploads/
+*.zip
+
+# User uploads (keep the placeholder directory)
+uploads/*
+!uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
