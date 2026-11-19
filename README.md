@@ -293,7 +293,9 @@ In development, the **role switcher** in the header and the **demo buttons** on 
 | `npm run typecheck` | Strict `tsc` for both packages |
 | `npm run build` / `start` | Compile the backend to `backend/dist` and build the frontend; start both production servers |
 
-**Backend** (`npm run <script> --prefix backend`): `dev` (tsx watch), `build` (tsc → `dist/`), `start` (`node dist/server.js`), `db:migrate` (`prisma migrate dev` for schema changes), `db:deploy`, `db:push`, `db:seed`, `db:studio`, `test:unit`, `test:integration`.
+**Backend** (`npm run <script> --prefix backend`): `dev` (tsx watch), `build` (tsc → `dist/`), `start` (`node dist/server.js`), `db:migrate` (`prisma migrate dev` for schema changes), `db:deploy`, `db:push`, `db:seed`, `db:seed:accounts`, `db:studio`, `test:unit`, `test:integration`.
+
+`db:seed` deletes all application data before creating the full demo dataset. To add or reset only the five demo login accounts without deleting other data, use `npm run db:seed:accounts --prefix backend`. Add `-- --check` for a read-only verification. The command uses `backend/.env`; check its database target before running it.
 
 **Frontend** (`--prefix frontend`): `dev`, `build`, `start`, `typecheck`.
 
