@@ -170,6 +170,8 @@ frontend/
 
 ## 4. Quick start
 
+The frontend uses its own `/api` and `/uploads` paths for browser requests. Next.js forwards them to the backend, so login cookies work from both `localhost:3000` and `https://animelink-demo.vercel.app`. Local development uses `http://localhost:5000/api` from `frontend/.env.local`; a Vercel build without `NEXT_PUBLIC_API_URL` uses `https://animelink-demo.onrender.com/api`. Set `NEXT_PUBLIC_API_URL` on Vercel if the Render service URL changes. In production, QR codes and certificates link to the Vercel frontend by default; locally they link to `localhost:3000`.
+
 For Neon, `neon deploy` pulls `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct) into the root `.env`. Copy both values into `backend/.env`, which the Express server and Prisma CLI load. Repeat this after refreshing Neon credentials. Prisma uses the direct URL for migrations; for local PostgreSQL both variables can use the same URL. Apply the existing schema with `npm run db:deploy --prefix backend`. This does not seed demo accounts; `npm run db:seed` is a separate, optional operation.
 
 ### Prerequisites

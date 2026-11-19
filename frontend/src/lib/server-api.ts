@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 import type { ClientSession } from "./client/session";
 import type { Role } from "./constants";
 
-const INTERNAL_API_URL = (process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api").replace(/\/+$/, "");
+const INTERNAL_API_URL = (process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "production"
+  ? "https://animelink-demo.onrender.com/api"
+  : "http://localhost:5000/api")).replace(/\/+$/, "");
 
 export type ServerResult<T> = { ok: true; status: number; data: T } | { ok: false; status: number; data: null };
 

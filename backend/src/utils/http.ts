@@ -1,6 +1,7 @@
 // HTTP helpers shared by controllers: typed errors, validation, the table list contract, rate limiting.
 import type { Request } from "express";
 import { z, type ZodTypeAny } from "zod";
+import { env } from "../config/env";
 
 // ------------------------------------------------------------------ errors ---
 
@@ -155,7 +156,7 @@ export function clientIp(req: Pick<Request, "headers" | "ip">): string {
 
 /** Public web app origin — QR codes and certificates link to pages on the frontend. */
 export function frontendOrigin(): string {
-  return (process.env.FRONTEND_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  return env.frontendUrl;
 }
 
 /** A single named route parameter as a string (Express 5 types allow string[] for wildcards). */

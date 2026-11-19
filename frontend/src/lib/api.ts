@@ -1,12 +1,10 @@
-// Typed HTTP client for the decoupled Express API (default http://localhost:5000/api).
-// The session is an httpOnly cookie set by the API, so every call sends credentials.
+// Typed HTTP client. Next.js proxies /api to the configured backend.
+// The session is an httpOnly cookie set through that proxy.
 
-/** Base URL of the REST API, e.g. http://localhost:5000/api (no trailing slash). */
-export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api").replace(/\/+$/, "");
-/** API origin, e.g. http://localhost:5000 — used for non-/api resources such as /uploads. */
-export const API_ORIGIN = new URL(API_URL).origin;
+/** Same-origin base URL of the REST API. */
+export const API_URL = "/api";
 
-/** Absolute URL for an API path ("/pets/1/qr" → "http://localhost:5000/api/pets/1/qr"). Use for <a href>, <img src>, downloads. */
+/** URL for an API path, usable in fetch, links, images, and downloads. */
 export function apiUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
   return `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
@@ -61,7 +59,7 @@ export async function api<T = unknown>(path: string, init?: ApiInit): Promise<T>
       body: init?.body === undefined ? undefined : isForm ? (init.body as FormData) : JSON.stringify(init.body),
     });
   } catch {
-    throw new ApiClientError(0, `Cannot reach the API at ${API_URL}. Is the backend running (npm run dev)?`, "NETWORK_ERROR");
+    throw new ApiClientError(0, "Cannot reach the API. Check that the backend is running and its URL is configured.", "NETWORK_ERROR");
   }
   return parse<T>(res);
 }
